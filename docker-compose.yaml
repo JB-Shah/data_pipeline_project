@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+
+  spark:
+    build: ./spark
+    # image: bitnami/spark:latest
+    container_name: spark
+    ports:
+      - "8080:8080"
+    environment:
+      - SPARK_MODE=master
+
+
+  producer:
+    build:
+      context: ./producer
+    container_name: producer
+    depends_on:
+      - kafka
+    
+  hbase:
+    image: dajobe/hbase
+    container_name: hbase
+    ports:
+      - "16010:16010"
+      - "9095:9095"
+      - "8085:8085"
+      - "9090:9090"
+      - "16020:16020"
+    environment:
+      - HBASE_MANAGES_ZK=true
+
+# To view the Kafka topics and messages, you can use Kafdrop.
+  # kafdrop:
+  #   image: obsidiandynamics/kafdrop
+  #   container_name: kafdrop
+  #   restart: always
+  #   ports:
+  #     - "9000:9000"
+  #   environment:
+  #     KAFKA_BROKERCONNECT: kafka:9092
+  #     JVM_OPTS: "-Xms32M -Xmx64M"
+  #   depends_on:
+  #     - kafka
+
